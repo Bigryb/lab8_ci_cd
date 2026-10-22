@@ -1,0 +1,15 @@
+.git/
+.github/
+.gitignore
+.env
+.env.*
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.DS_Store
+*.pem
+*.key
+README.md
