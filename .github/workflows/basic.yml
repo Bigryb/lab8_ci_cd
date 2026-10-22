@@ -43,9 +43,34 @@ jobs:
           IMAGE_TAG: ${{ steps.version.outputs.sha }}
         run: |
           IMAGE="$DOCKER_USERNAME/lab8_ci_cd:$IMAGE_TAG"
+
           docker pull "$IMAGE"
           docker image ls "$IMAGE"
-          docker run -d --name lab8-check -p 127.0.0.1:8000:8000 "$IMAGE"
+
+          docker run -d --name lab8-check \
+            -p 127.0.0.1:8000:8000 "$IMAGE"
+
           trap 'docker rm -f lab8-check >/dev/null 2>&1 || true' EXIT
-          curl --fail --show-error --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8000/health
+
+          for attempt in {1..15}; do
+            echo "Проверка запуска Flask: попытка $attempt"
+
+            if curl -fsS --max-time 3 http://127.0.0.1:8000/health; then
+              echo
+              echo "Flask работает успешно!"
+              exit 0
+            fi
+
+            if [ "$(docker inspect -f '{{.State.Running}}' lab8-check)" != "true" ]; then
+              echo "Контейнер неожиданно завершился."
+              docker logs lab8-check
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+          echo "Flask не ответил за отведенное время."
+          docker logs lab8-check
+          exit 1
           
